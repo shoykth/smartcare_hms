@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1005769946949",
+    "project_id": "hospital-management-app-11e7f",
+    "storage_bucket": "hospital-management-app-11e7f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1005769946949:android:fee34e3b504f04d3def02c",
+        "android_client_info": {
+          "package_name": "com.example.smartcare_hms"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1005769946949-12sla561vtn8jg88gee2lbhb9n8tgn5o.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.smartcare_hms",
+            "certificate_hash": "ac15ad376b9ba0c7b1c9bd672aee8bbba91b9a24"
+          }
+        },
+        {
+          "client_id": "1005769946949-ro2g7l8fr0612bq3fjls79f2td7j2v2e.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDBIZHhsz7O7hxS3n5-henBDmGm_cAWvMc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1005769946949-ro2g7l8fr0612bq3fjls79f2td7j2v2e.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
