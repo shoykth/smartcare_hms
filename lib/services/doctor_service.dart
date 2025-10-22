@@ -12,7 +12,7 @@ class DoctorService {
   // Collection reference
   CollectionReference get _doctorsCollection => _firestore.collection('doctors');
 
-  // Add new doctor
+  // Add new doctor (for admin use - creates new document with auto-generated ID)
   Future<String> addDoctor(DoctorModel doctor) async {
     try {
       DocumentReference docRef = await _doctorsCollection.add(doctor.toMap());
@@ -32,6 +32,30 @@ class DoctorService {
       return docRef.id;
     } catch (e) {
       throw Exception('Failed to add doctor: ${e.toString()}');
+    }
+  }
+
+  // Create doctor record with specific UID (for user registration sync)
+  Future<void> createDoctorWithUID(DoctorModel doctor) async {
+    try {
+      await _doctorsCollection.doc(doctor.id).set(doctor.toMap());
+      
+      // Log activity
+      await _dbService.logActivity(
+        userId: doctor.id,
+        action: 'doctor_profile_created',
+        resourceType: 'doctor',
+        resourceId: doctor.id,
+        details: {
+          'doctorName': doctor.name,
+          'specialization': doctor.specialization,
+        },
+      );
+
+      print('DEBUG: Created doctor record with UID: ${doctor.id} for ${doctor.name}');
+    } catch (e) {
+      print('ERROR: Failed to create doctor record with UID: ${e.toString()}');
+      throw Exception('Failed to create doctor record: ${e.toString()}');
     }
   }
 
@@ -158,7 +182,7 @@ class DoctorService {
     return _doctorsCollection
         .orderBy('name')
         .startAt([query])
-        .endAt([query + '\uf8ff'])
+        .endAt(['$query\uf8ff'])
         .snapshots()
         .map((snapshot) {
       return snapshot.docs

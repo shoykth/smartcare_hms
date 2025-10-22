@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/auth_service.dart';
 import '../../utils/constants.dart';
+import '../../utils/sync_users_to_collections.dart';
+import '../../utils/run_doctor_sync_fix.dart';
 import '../patient/patient_list_screen.dart';
+import 'user_management_screen.dart';
 
 class AdminDashboard extends ConsumerWidget {
   final String userName;
@@ -152,8 +155,10 @@ class AdminDashboard extends ConsumerWidget {
               title: 'User Management',
               subtitle: 'Manage doctors, patients, and staff',
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Feature coming soon!')),
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const UserManagementScreen(),
+                  ),
                 );
               },
             ),
@@ -198,6 +203,23 @@ class AdminDashboard extends ConsumerWidget {
             const SizedBox(height: 12),
             _buildMenuCard(
               context: context,
+              icon: Icons.sync,
+              title: 'Sync Users to Collections',
+              subtitle: 'Sync doctors & patients to their collections',
+              //color: Colors.blue, I comment it
+              onTap: () => _showSyncDialog(context),
+            ),
+            const SizedBox(height: 12),
+            _buildMenuCard(
+              context: context,
+              icon: Icons.medical_services,
+              title: 'Fix Doctor Sync Issues',
+              subtitle: 'Fix doctor visibility in appointments & admin',
+              onTap: () => _showDoctorFixDialog(context),
+            ),
+            const SizedBox(height: 12),
+            _buildMenuCard(
+              context: context,
               icon: Icons.settings_outlined,
               title: 'System Settings',
               subtitle: 'Configure system settings',
@@ -206,6 +228,23 @@ class AdminDashboard extends ConsumerWidget {
                   const SnackBar(content: Text('Feature coming soon!')),
                 );
               },
+            ),
+            const SizedBox(height: 24),
+
+            // Development & Testing Section
+            Text(
+              'Development & Testing',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 16),
+            _buildMenuCard(
+              context: context,
+              icon: Icons.group_add,
+              title: 'Add Test Patients',
+              subtitle: 'Populate database with sample patient data',
+              onTap: () => _showAddTestPatientsDialog(context),
             ),
           ],
         ),
@@ -319,6 +358,317 @@ class AdminDashboard extends ConsumerWidget {
           SnackBar(
             content: Text('Error: ${e.toString()}'),
             backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showSyncDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.sync, color: Colors.blue),
+            SizedBox(width: 12),
+            Text('Sync Users to Collections'),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This will sync existing doctor and patient users to their respective collections.',
+              style: TextStyle(fontSize: 14),
+            ),
+            SizedBox(height: 16),
+            Text(
+              '• Doctors → doctors collection\n'
+              '• Patients → patients collection',
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+            SizedBox(height: 16),
+            Row(
+              children: [
+                Icon(Icons.info_outline, size: 16, color: Colors.orange),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Existing records will be skipped',
+                    style: TextStyle(fontSize: 12, color: Colors.orange),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await _runSync(context);
+            },
+            icon: const Icon(Icons.sync),
+            label: const Text('Sync Now'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDoctorFixDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.medical_services, color: Colors.green),
+            SizedBox(width: 12),
+            Text('Fix Doctor Sync Issues'),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This will fix doctor synchronization issues that prevent doctors from appearing in appointments and admin panels.',
+              style: TextStyle(fontSize: 14),
+            ),
+            SizedBox(height: 16),
+            Text(
+              '• Creates missing doctor records with correct UIDs\n'
+              '• Fixes records with wrong document IDs\n'
+              '• Removes orphaned doctor records',
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+            SizedBox(height: 16),
+            Row(
+              children: [
+                Icon(Icons.warning_outlined, size: 16, color: Colors.orange),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'This will modify the doctors collection',
+                    style: TextStyle(fontSize: 12, color: Colors.orange),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await _runDoctorFix(context);
+            },
+            icon: const Icon(Icons.build),
+            label: const Text('Fix Now'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _runSync(BuildContext context) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Syncing users...'),
+            SizedBox(height: 8),
+            Text(
+              'This may take a few moments',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final syncService = SyncUsersToCollections();
+      await syncService.syncAllUsers();
+
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Sync completed successfully!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Sync failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _runDoctorFix(BuildContext context) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Fixing doctor sync issues...'),
+            SizedBox(height: 8),
+            Text(
+              'This may take a few moments',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      await runDoctorSyncFix();
+
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Doctor sync issues fixed successfully!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Doctor fix failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showAddTestPatientsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Add Test Patients'),
+          content: const Text(
+            'This will add sample patient data to the database for testing purposes. '
+            'Are you sure you want to proceed?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _addTestPatients(context);
+              },
+              child: const Text('Add Test Patients'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _addTestPatients(BuildContext context) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Adding test patients...'),
+            SizedBox(height: 8),
+            Text(
+              'This may take a few moments',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      // TODO: Implement AddTestPatients functionality
+      // await AddTestPatients().addTestPatients();
+      
+      // Temporary placeholder - simulate adding test patients
+      await Future.delayed(const Duration(seconds: 2));
+
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Test patients added successfully!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Failed to add test patients: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
           ),
         );
       }

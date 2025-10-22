@@ -69,8 +69,16 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     _medicalHistoryController.text = patient.medicalHistory;
     _allergiesController.text = patient.allergies;
     _chronicDiseasesController.text = patient.chronicDiseases;
-    _selectedGender = patient.gender;
-    _selectedBloodGroup = patient.bloodGroup;
+    
+    // Ensure gender value exists in options, otherwise use default
+    _selectedGender = _genderOptions.contains(patient.gender) 
+        ? patient.gender 
+        : _genderOptions.first;
+    
+    // Ensure blood group value exists in options, otherwise use default
+    _selectedBloodGroup = _bloodGroups.contains(patient.bloodGroup) 
+        ? patient.bloodGroup 
+        : _bloodGroups.first;
   }
 
   @override
@@ -391,8 +399,11 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     required List<String> items,
     required void Function(String?) onChanged,
   }) {
+    // Ensure the value exists in items, otherwise use the first item
+    String validValue = items.contains(value) ? value : items.first;
+    
     return DropdownButtonFormField<String>(
-      value: value,
+      value: validValue,
       decoration: InputDecoration(
         labelText: label,
         filled: true,

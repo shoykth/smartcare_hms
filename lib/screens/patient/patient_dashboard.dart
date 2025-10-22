@@ -4,6 +4,8 @@ import '../../services/auth_service.dart';
 import '../../utils/constants.dart';
 import '../appointments/patient_appointments_screen.dart';
 import '../appointments/book_appointment_screen.dart';
+import 'prescriptions_screen.dart';
+import 'medical_records_screen.dart';
 
 class PatientDashboard extends ConsumerWidget {
   final String userName;
@@ -158,8 +160,10 @@ class PatientDashboard extends ConsumerWidget {
               title: 'Medical Records',
               subtitle: 'Access your medical history and reports',
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Feature coming soon!')),
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const MedicalRecordsScreen(),
+                  ),
                 );
               },
             ),
@@ -170,8 +174,11 @@ class PatientDashboard extends ConsumerWidget {
               title: 'Prescriptions',
               subtitle: 'View your active prescriptions',
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Feature coming soon!')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const PrescriptionsScreen(),
+                  ),
                 );
               },
             ),

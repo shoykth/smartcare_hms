@@ -188,7 +188,7 @@ class _PatientAppointmentsScreenState extends State<PatientAppointmentsScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              'No ${filter} appointments',
+              'No $filter appointments',
               style: TextStyle(
                 fontSize: 18,
                 color: Colors.grey.shade600,

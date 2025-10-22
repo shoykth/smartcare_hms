@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/auth_service.dart';
 import '../../services/appointment_service.dart';
 import '../../services/medical_note_service.dart';
@@ -48,14 +47,19 @@ class _DoctorDashboardEnhancedState extends State<DoctorDashboardEnhanced> {
         final pending = await _appointmentService.getPendingAppointmentCount(user.uid);
         final notes = await _noteService.getMedicalNoteCountByDoctor(user.uid);
 
+        if (!mounted) return;
         setState(() {
           _todayAppointments = today;
           _pendingAppointments = pending;
           _totalNotes = notes;
           _isLoading = false;
         });
+      } else {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }

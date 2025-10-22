@@ -175,7 +175,7 @@ class MedicalNoteService {
     return _notesCollection
         .orderBy('diagnosis')
         .startAt([query])
-        .endAt([query + '\uf8ff'])
+        .endAt(['$query\uf8ff'])
         .snapshots()
         .map((snapshot) {
       return snapshot.docs

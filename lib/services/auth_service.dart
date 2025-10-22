@@ -4,10 +4,13 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../models/user_model.dart';
 import 'database_service.dart';
 
+
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: ['email'],
+  );
   final DatabaseService _dbService = DatabaseService();
 
   // Get current user
@@ -52,6 +55,15 @@ class AuthService {
       // Initialize system data (departments & settings) on first user
       await _dbService.initializeAdminSettings();
       await _dbService.initializeDepartments();
+
+      // Create role-specific records
+      if (role == UserRole.doctor) {
+        // Create doctor record
+        await _createDoctorRecord(userCredential.user!.uid, name, email);
+      } else if (role == UserRole.patient) {
+        // Create patient record
+        await _createPatientRecord(userCredential.user!.uid, name, email);
+      }
 
       // Log activity
       await _dbService.logActivity(
@@ -287,6 +299,69 @@ class AuthService {
       await _auth.sendPasswordResetEmail(email: email);
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
+    }
+  }
+
+  // Create doctor record in doctors collection
+  Future<void> _createDoctorRecord(String uid, String name, String email) async {
+    try {
+      final doctorData = {
+        'id': uid,
+        'name': name,
+        'email': email,
+        'phone': '',
+        'specialization': '',
+        'department': '',
+        'qualification': '',
+        'experience': '0 years',
+        'rating': 0.0,
+        'totalPatients': 0,
+        'bio': '',
+        'isAvailable': true,
+        'profileImageUrl': '',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      await _firestore.collection('doctors').doc(uid).set(doctorData);
+
+      print('DEBUG: Created doctor record for $name (UID: $uid)');
+    } catch (e) {
+      print('ERROR: Failed to create doctor record: ${e.toString()}');
+      throw Exception('Failed to create doctor record: ${e.toString()}');
+    }
+  }
+
+  // Create patient record in patients collection
+  Future<void> _createPatientRecord(String uid, String name, String email) async {
+    try {
+      final patientData = {
+        'id': uid,
+        'name': name,
+        'email': email,
+        'phone': '',
+        'dateOfBirth': null,
+        'gender': '',
+        'bloodGroup': '',
+        'address': '',
+        'emergencyContact': '',
+        'emergencyContactName': '',
+        'allergies': [],
+        'chronicConditions': [],
+        'currentMedications': [],
+        'profileImage': '',
+        'insuranceProvider': '',
+        'insuranceNumber': '',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      await _firestore.collection('patients').doc(uid).set(patientData);
+
+      print('DEBUG: Created patient record for $name (UID: $uid)');
+    } catch (e) {
+      print('ERROR: Failed to create patient record: ${e.toString()}');
+      throw Exception('Failed to create patient record: ${e.toString()}');
     }
   }
 }

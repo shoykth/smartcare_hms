@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../../models/doctor_model.dart';
 import '../../models/appointment_model.dart';
-import '../../models/user_model.dart';
 import '../../services/doctor_service.dart';
 import '../../services/appointment_service.dart';
 import '../../services/doctor_availability_service.dart';
@@ -102,21 +101,62 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
       return;
     }
 
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('Booking appointment...'),
+          ],
+        ),
+      ),
+    );
+
     try {
       final user = _authService.currentUser;
-      if (user == null) throw Exception('User not logged in');
+      if (user == null) {
+        throw Exception('User not logged in. Please log in again.');
+      }
 
+      // Validate user data
       final userData = await _authService.getUserData(user.uid);
-      if (userData == null) throw Exception('User data not found');
+      if (userData == null) {
+        throw Exception('User profile not found. Please update your profile.');
+      }
+
+      if (userData.name.isEmpty) {
+        throw Exception('User name is required. Please update your profile.');
+      }
+
+      // Validate doctor data
+      final doctorData = await _doctorService.getDoctorById(_selectedDoctor!.id);
+      if (doctorData == null) {
+        throw Exception('Doctor information not found. Please try selecting another doctor.');
+      }
 
       // Calculate end time (30 minutes default)
       final endTime = _selectedTimeSlot!.add(const Duration(minutes: 30));
+
+      // Validate time slot is still available
+      final hasConflict = await _appointmentService.hasConflict(
+        doctorId: _selectedDoctor!.id,
+        startTime: _selectedTimeSlot!,
+        endTime: endTime,
+      );
+
+      if (hasConflict) {
+        throw Exception('This time slot is no longer available. Please choose another time.');
+      }
 
       final appointment = AppointmentModel(
         id: '',
         doctorId: _selectedDoctor!.id,
         patientId: user.uid,
-        doctorName: _selectedDoctor!.name,
+        doctorName: doctorData.name,
         patientName: userData.name,
         startTime: Timestamp.fromDate(_selectedTimeSlot!.toUtc()),
         endTime: Timestamp.fromDate(endTime.toUtc()),
@@ -128,29 +168,51 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         meetingType: _meetingType,
       );
 
-      await _appointmentService.createAppointment(appointment);
+      final appointmentId = await _appointmentService.createAppointment(appointment);
+
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Appointment booked successfully!'),
+          SnackBar(
+            content: Text('Appointment booked successfully! ID: ${appointmentId.substring(0, 8)}'),
             backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 3),
           ),
         );
         Navigator.of(context).pop(true);
       }
     } catch (e) {
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
+
       if (mounted) {
         String errorMessage = 'Failed to book appointment';
-        if (e.toString().contains('no longer available')) {
+        
+        // Handle specific error cases
+        if (e.toString().contains('User not logged in')) {
+          errorMessage = 'Please log in again to book an appointment.';
+        } else if (e.toString().contains('User profile not found')) {
+          errorMessage = 'Please update your profile before booking.';
+        } else if (e.toString().contains('Doctor information not found')) {
+          errorMessage = 'Doctor information is missing. Please try another doctor.';
+        } else if (e.toString().contains('no longer available')) {
           errorMessage = 'This time slot was just taken. Please choose another.';
           _loadAvailableSlots(); // Refresh slots
+        } else if (e.toString().contains('User name is required')) {
+          errorMessage = 'Please update your profile with your name.';
+        } else {
+          // Log the full error for debugging
+          print('Appointment booking error: ${e.toString()}');
+          errorMessage = 'Failed to book appointment. Please try again.';
         }
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
             backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 4),
           ),
         );
       }

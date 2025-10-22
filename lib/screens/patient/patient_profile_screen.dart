@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/patient_model.dart';
 import '../../models/user_model.dart';
 import '../../services/patient_service.dart';
@@ -200,23 +199,17 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     children: [
                       _buildInfoSection(
                         'Medical History',
-                        widget.patient.medicalHistory.isEmpty
-                            ? 'No medical history recorded'
-                            : widget.patient.medicalHistory,
+                        _safeStringDisplay(widget.patient.medicalHistory, 'No medical history recorded'),
                       ),
                       const SizedBox(height: 12),
                       _buildInfoSection(
                         'Allergies',
-                        widget.patient.allergies.isEmpty
-                            ? 'No known allergies'
-                            : widget.patient.allergies,
+                        _safeStringDisplay(widget.patient.allergies, 'No known allergies'),
                       ),
                       const SizedBox(height: 12),
                       _buildInfoSection(
                         'Chronic Diseases',
-                        widget.patient.chronicDiseases.isEmpty
-                            ? 'No chronic diseases'
-                            : widget.patient.chronicDiseases,
+                        _safeStringDisplay(widget.patient.chronicDiseases, 'No chronic diseases'),
                       ),
                     ],
                   ),
@@ -398,6 +391,25 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
         ),
       ],
     );
+  }
+
+  /// Safely converts dynamic values to string for display
+  String _safeStringDisplay(dynamic value, String defaultValue) {
+    if (value == null) return defaultValue;
+    
+    if (value is String) {
+      return value.isEmpty ? defaultValue : value;
+    }
+    
+    if (value is List) {
+      if (value.isEmpty) return defaultValue;
+      // Join list items with commas for display
+      return value.map((item) => item.toString()).join(', ');
+    }
+    
+    // For any other type, convert to string
+    String stringValue = value.toString();
+    return stringValue.isEmpty ? defaultValue : stringValue;
   }
 }
 

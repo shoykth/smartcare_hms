@@ -105,7 +105,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
         createdAt: Timestamp.now(),
       );
 
-      await _doctorService.addDoctor(newDoctor);
+      await _doctorService.createDoctorWithUID(newDoctor);
       
       setState(() {
         _doctor = newDoctor;
@@ -452,7 +452,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
               children: [
                 _buildStatBadge(Icons.people, '${_doctor!.totalPatients ?? 0}', 'Patients'),
                 const SizedBox(width: 24),
-                _buildStatBadge(Icons.star, '${_doctor!.rating?.toStringAsFixed(1) ?? '0.0'}', 'Rating'),
+                _buildStatBadge(Icons.star, _doctor!.rating?.toStringAsFixed(1) ?? '0.0', 'Rating'),
               ],
             ),
           ],

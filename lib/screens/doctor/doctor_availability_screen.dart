@@ -4,7 +4,6 @@ import '../../models/doctor_availability_model.dart';
 import '../../services/doctor_availability_service.dart';
 import '../../services/auth_service.dart';
 import '../../utils/constants.dart';
-import '../../widgets/custom_button.dart';
 
 class DoctorAvailabilityScreen extends StatefulWidget {
   const DoctorAvailabilityScreen({super.key});
@@ -60,17 +59,46 @@ class _DoctorAvailabilityScreenState extends State<DoctorAvailabilityScreen> {
                   color: AppColors.primary.withOpacity(0.1),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Row(
+                    child: Column(
                       children: [
-                        Icon(Icons.info_outline, color: AppColors.primary),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Set your weekly availability. Patients will be able to book appointments during these times.',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey.shade700,
+                        Row(
+                          children: [
+                            Icon(Icons.info_outline, color: AppColors.primary),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Set your weekly availability. Patients will be able to book appointments during these times.',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
                             ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.orange.shade300),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.lightbulb_outline, color: Colors.orange.shade700, size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Toggle must be GREEN (ON) for patients to book!\nTotal active days: ${availabilities.where((a) => a.isActive).length}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.orange.shade900,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -97,7 +125,7 @@ class _DoctorAvailabilityScreenState extends State<DoctorAvailabilityScreen> {
                       id: '',
                       doctorId: user.uid,
                       dayOfWeek: dayOfWeek,
-                      startTime: '09:00',
+                      startTime: '13:00',
                       endTime: '17:00',
                       slotDurationMinutes: 30,
                       isActive: false,
@@ -138,12 +166,33 @@ class _DoctorAvailabilityScreenState extends State<DoctorAvailabilityScreen> {
                 // Day name
                 SizedBox(
                   width: 80,
-                  child: Text(
-                    availability.dayName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        availability.dayName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: availability.isActive ? Colors.green.shade100 : Colors.red.shade100,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          availability.isActive ? 'ON' : 'OFF',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: availability.isActive ? Colors.green.shade900 : Colors.red.shade900,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 
@@ -153,18 +202,24 @@ class _DoctorAvailabilityScreenState extends State<DoctorAvailabilityScreen> {
                     value: availability.isActive,
                     onChanged: (value) async {
                       try {
+                        print('DEBUG: Toggling availability for ${availability.dayName}, isActive: $value');
+                        print('DEBUG: availability.id = "${availability.id}"');
+                        print('DEBUG: doctorId = "${availability.doctorId}"');
+                        
                         if (availability.id.isEmpty) {
                           // Create new availability
                           final newAvailability = availability.copyWith(
                             isActive: value,
+                            createdAt: Timestamp.now(),
                           );
-                          await _availabilityService.setAvailability(
-                            newAvailability,
-                          );
+                          print('DEBUG: Creating new availability: ${newAvailability.toMap()}');
+                          final docId = await _availabilityService.setAvailability(newAvailability);
+                          print('DEBUG: Created with ID: $docId');
                         } else {
                           // Toggle existing
                           final user = _authService.currentUser;
                           if (user != null) {
+                            print('DEBUG: Toggling existing availability ID: ${availability.id}');
                             await _availabilityService.toggleAvailability(
                               availability.id,
                               user.uid,
@@ -177,24 +232,27 @@ class _DoctorAvailabilityScreenState extends State<DoctorAvailabilityScreen> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                value ? 'Availability enabled' : 'Availability disabled',
+                                value ? '${availability.dayName} enabled - Check Firebase!' : '${availability.dayName} disabled',
                               ),
                               backgroundColor: AppColors.success,
+                              duration: const Duration(seconds: 2),
                             ),
                           );
                         }
                       } catch (e) {
+                        print('DEBUG ERROR: ${e.toString()}');
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('Error: ${e.toString()}'),
                               backgroundColor: AppColors.error,
+                              duration: const Duration(seconds: 4),
                             ),
                           );
                         }
                       }
                     },
-                    activeColor: AppColors.success,
+                    activeThumbColor: AppColors.success,
                   ),
                 ),
 
@@ -341,7 +399,7 @@ class _DoctorAvailabilityScreenState extends State<DoctorAvailabilityScreen> {
 
               // Slot Duration
               DropdownButtonFormField<int>(
-                value: slotDuration,
+                initialValue: slotDuration,
                 decoration: const InputDecoration(
                   labelText: 'Slot Duration',
                   prefixIcon: Icon(Icons.timelapse),

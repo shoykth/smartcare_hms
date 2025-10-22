@@ -109,12 +109,28 @@ class PatientService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => PatientModel.fromMap(
-                doc.data() as Map<String, dynamic>,
-                doc.id,
-              ))
-          .toList();
+      try {
+        List<PatientModel> patients = [];
+        for (var doc in snapshot.docs) {
+          try {
+            final data = doc.data() as Map<String, dynamic>;
+            final patient = PatientModel.fromMap(data, doc.id);
+            patients.add(patient);
+          } catch (e) {
+            print('PatientService: Error processing patient document ${doc.id}: $e');
+            // Continue processing other documents instead of failing completely
+          }
+        }
+        
+        if (patients.isEmpty && snapshot.docs.isNotEmpty) {
+          print('PatientService: Warning - No patients could be processed from ${snapshot.docs.length} documents');
+        }
+        
+        return patients;
+      } catch (e) {
+        print('PatientService: Error in getPatients stream: $e');
+        rethrow;
+      }
     });
   }
 
@@ -155,7 +171,7 @@ class PatientService {
     return _patientsCollection
         .orderBy('name')
         .startAt([query])
-        .endAt([query + '\uf8ff'])
+        .endAt(['$query\uf8ff'])
         .snapshots()
         .map((snapshot) {
       return snapshot.docs

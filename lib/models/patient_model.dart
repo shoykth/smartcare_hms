@@ -59,24 +59,46 @@ class PatientModel {
     };
   }
 
+  // Helper method to safely convert dynamic values to String
+  static String _safeStringConversion(dynamic value) {
+    if (value == null) return '';
+    if (value is String) return value;
+    if (value is List) {
+      // If it's a list, join the elements with commas
+      return value.map((e) => e.toString()).join(', ');
+    }
+    return value.toString();
+  }
+
+  // Helper method to safely convert dynamic values to int
+  static int _safeIntConversion(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is String) {
+      return int.tryParse(value) ?? 0;
+    }
+    if (value is double) return value.toInt();
+    return 0;
+  }
+
   // Create PatientModel from Firestore document
   factory PatientModel.fromMap(Map<String, dynamic> map, String documentId) {
     return PatientModel(
       id: documentId,
-      name: map['name'] ?? '',
-      age: map['age'] ?? 0,
-      gender: map['gender'] ?? '',
-      phone: map['phone'] ?? '',
-      email: map['email'] ?? '',
-      address: map['address'] ?? '',
-      emergencyContactName: map['emergencyContactName'] ?? '',
-      emergencyContactPhone: map['emergencyContactPhone'] ?? '',
-      bloodGroup: map['bloodGroup'] ?? '',
-      medicalHistory: map['medicalHistory'] ?? '',
-      allergies: map['allergies'] ?? '',
-      chronicDiseases: map['chronicDiseases'] ?? '',
+      name: _safeStringConversion(map['name']),
+      age: _safeIntConversion(map['age']),
+      gender: _safeStringConversion(map['gender']),
+      phone: _safeStringConversion(map['phone']),
+      email: _safeStringConversion(map['email']),
+      address: _safeStringConversion(map['address']),
+      emergencyContactName: _safeStringConversion(map['emergencyContactName']),
+      emergencyContactPhone: _safeStringConversion(map['emergencyContactPhone']),
+      bloodGroup: _safeStringConversion(map['bloodGroup']),
+      medicalHistory: _safeStringConversion(map['medicalHistory']),
+      allergies: _safeStringConversion(map['allergies']),
+      chronicDiseases: _safeStringConversion(map['chronicDiseases']),
       createdAt: map['createdAt'] ?? Timestamp.now(),
-      createdBy: map['createdBy'] ?? '',
+      createdBy: _safeStringConversion(map['createdBy']),
       updatedAt: map['updatedAt'],
     );
   }

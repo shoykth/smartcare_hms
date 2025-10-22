@@ -50,6 +50,23 @@ class AppointmentService {
   // Create new appointment with conflict checking
   Future<String> createAppointment(AppointmentModel appointment) async {
     try {
+      // Validate appointment data
+      if (appointment.doctorId.isEmpty) {
+        throw Exception('Doctor ID is required');
+      }
+      if (appointment.patientId.isEmpty) {
+        throw Exception('Patient ID is required');
+      }
+      if (appointment.doctorName.isEmpty) {
+        throw Exception('Doctor name is required');
+      }
+      if (appointment.patientName.isEmpty) {
+        throw Exception('Patient name is required');
+      }
+      if (appointment.reason == null || appointment.reason!.isEmpty) {
+        throw Exception('Reason for visit is required');
+      }
+
       // Check for conflicts
       final hasTimeConflict = await hasConflict(
         doctorId: appointment.doctorId,
@@ -78,42 +95,52 @@ class AppointmentService {
 
         // Create appointment
         final docRef = _appointmentsCollection.doc();
-        transaction.set(docRef, appointment.toMap());
+        final appointmentData = appointment.toMap();
+        appointmentData['id'] = docRef.id; // Ensure ID is set
+        
+        transaction.set(docRef, appointmentData);
 
         // Schedule notifications and logging after transaction
         Future.microtask(() async {
-          // Log activity
-          await _dbService.logActivity(
-            userId: appointment.createdBy,
-            action: 'appointment_created',
-            resourceType: 'appointment',
-            resourceId: docRef.id,
-            details: {
-              'doctorId': appointment.doctorId,
-              'startTime': appointment.startTime.toDate().toString(),
-            },
-          );
+          try {
+            // Log activity
+            await _dbService.logActivity(
+              userId: appointment.createdBy,
+              action: 'appointment_created',
+              resourceType: 'appointment',
+              resourceId: docRef.id,
+              details: {
+                'doctorId': appointment.doctorId,
+                'startTime': appointment.startTime.toDate().toString(),
+              },
+            );
 
-          // Create notification for doctor
-          await _dbService.createNotification(
-            userId: appointment.doctorId,
-            title: 'New Appointment Request',
-            message: 'You have a new appointment request from ${appointment.patientName}',
-            type: 'appointment',
-          );
+            // Create notification for doctor
+            await _dbService.createNotification(
+              userId: appointment.doctorId,
+              title: 'New Appointment Request',
+              message: 'You have a new appointment request from ${appointment.patientName}',
+              type: 'appointment',
+            );
 
-          // Create notification for patient
-          await _dbService.createNotification(
-            userId: appointment.patientId,
-            title: 'Appointment Created',
-            message: 'Your appointment with Dr. ${appointment.doctorName} has been created',
-            type: 'appointment',
-          );
+            // Create notification for patient
+            await _dbService.createNotification(
+              userId: appointment.patientId,
+              title: 'Appointment Created',
+              message: 'Your appointment with Dr. ${appointment.doctorName} has been created',
+              type: 'appointment',
+            );
+          } catch (notificationError) {
+            // Log notification errors but don't fail the appointment creation
+            print('Warning: Failed to send notifications: $notificationError');
+          }
         });
 
         return docRef.id;
       });
     } catch (e) {
+      // Log the error for debugging
+      print('Appointment creation error: ${e.toString()}');
       throw Exception('Failed to create appointment: ${e.toString()}');
     }
   }
