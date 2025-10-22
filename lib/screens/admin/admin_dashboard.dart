@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/auth_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/sync_users_to_collections.dart';
@@ -16,6 +17,30 @@ class AdminDashboard extends ConsumerWidget {
     required this.userName,
     required this.userEmail,
   });
+
+  // Get total users count
+  Stream<int> _getTotalUsersCount() {
+    return FirebaseFirestore.instance
+        .collection('users')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  // Get total doctors count
+  Stream<int> _getTotalDoctorsCount() {
+    return FirebaseFirestore.instance
+        .collection('doctors')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  // Get total appointments count
+  Stream<int> _getTotalAppointmentsCount() {
+    return FirebaseFirestore.instance
+        .collection('appointments')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -99,20 +124,32 @@ class AdminDashboard extends ConsumerWidget {
             Row(
               children: [
                 Expanded(
-                  child: _buildStatCard(
-                    icon: Icons.people,
-                    title: 'Total Users',
-                    value: '248',
-                    color: Colors.blue,
+                  child: StreamBuilder<int>(
+                    stream: _getTotalUsersCount(),
+                    builder: (context, snapshot) {
+                      return _buildStatCard(
+                        icon: Icons.people,
+                        title: 'Total Users',
+                        value: snapshot.hasData ? '${snapshot.data}' : '...',
+                        color: Colors.blue,
+                        isLoading: !snapshot.hasData,
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: _buildStatCard(
-                    icon: Icons.medical_services,
-                    title: 'Doctors',
-                    value: '42',
-                    color: Colors.green,
+                  child: StreamBuilder<int>(
+                    stream: _getTotalDoctorsCount(),
+                    builder: (context, snapshot) {
+                      return _buildStatCard(
+                        icon: Icons.medical_services,
+                        title: 'Doctors',
+                        value: snapshot.hasData ? '${snapshot.data}' : '...',
+                        color: Colors.green,
+                        isLoading: !snapshot.hasData,
+                      );
+                    },
                   ),
                 ),
               ],
@@ -121,11 +158,17 @@ class AdminDashboard extends ConsumerWidget {
             Row(
               children: [
                 Expanded(
-                  child: _buildStatCard(
-                    icon: Icons.calendar_today,
-                    title: 'Appointments',
-                    value: '156',
-                    color: Colors.orange,
+                  child: StreamBuilder<int>(
+                    stream: _getTotalAppointmentsCount(),
+                    builder: (context, snapshot) {
+                      return _buildStatCard(
+                        icon: Icons.calendar_today,
+                        title: 'Appointments',
+                        value: snapshot.hasData ? '${snapshot.data}' : '...',
+                        color: Colors.orange,
+                        isLoading: !snapshot.hasData,
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -257,6 +300,7 @@ class AdminDashboard extends ConsumerWidget {
     required String title,
     required String value,
     required Color color,
+    bool isLoading = false,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -276,14 +320,22 @@ class AdminDashboard extends ConsumerWidget {
         children: [
           Icon(icon, color: color, size: 32),
           const SizedBox(height: 12),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
+          isLoading
+              ? SizedBox(
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(color),
+                  ),
+                )
+              : Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
           const SizedBox(height: 4),
           Text(
             title,
