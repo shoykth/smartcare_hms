@@ -166,6 +166,26 @@ class PatientService {
     }
   }
 
+  // Get patient by email
+  Future<PatientModel?> getPatientByEmail(String email) async {
+    try {
+      QuerySnapshot snapshot = await _patientsCollection
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
+      
+      if (snapshot.docs.isNotEmpty) {
+        return PatientModel.fromMap(
+          snapshot.docs.first.data() as Map<String, dynamic>,
+          snapshot.docs.first.id,
+        );
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Failed to get patient by email: ${e.toString()}');
+    }
+  }
+
   // Search patients by name
   Stream<List<PatientModel>> searchPatients(String query) {
     return _patientsCollection

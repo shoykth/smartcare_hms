@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/auth_service.dart';
+import '../../services/appointment_service.dart';
+import '../../services/medical_note_service.dart';
 import '../../utils/constants.dart';
 import '../appointments/patient_appointments_screen.dart';
 import '../appointments/book_appointment_screen.dart';
 import 'prescriptions_screen.dart';
 import 'medical_records_screen.dart';
+import 'my_profile_screen.dart';
 
-class PatientDashboard extends ConsumerWidget {
+class PatientDashboard extends ConsumerStatefulWidget {
   final String userName;
   final String userEmail;
 
@@ -18,7 +21,16 @@ class PatientDashboard extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PatientDashboard> createState() => _PatientDashboardState();
+}
+
+class _PatientDashboardState extends ConsumerState<PatientDashboard> {
+  final AuthService _authService = AuthService();
+  final AppointmentService _appointmentService = AppointmentService();
+  final MedicalNoteService _medicalNoteService = MedicalNoteService();
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -61,7 +73,7 @@ class PatientDashboard extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    userName,
+                    widget.userName,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 28,
@@ -98,21 +110,11 @@ class PatientDashboard extends ConsumerWidget {
             Row(
               children: [
                 Expanded(
-                  child: _buildStatCard(
-                    icon: Icons.calendar_today,
-                    title: 'Appointments',
-                    value: '3',
-                    color: Colors.blue,
-                  ),
+                  child: _buildAppointmentStatCard(),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: _buildStatCard(
-                    icon: Icons.description,
-                    title: 'Reports',
-                    value: '7',
-                    color: Colors.green,
-                  ),
+                  child: _buildReportsStatCard(),
                 ),
               ],
             ),
@@ -201,14 +203,102 @@ class PatientDashboard extends ConsumerWidget {
               title: 'My Profile',
               subtitle: 'Update your personal information',
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Feature coming soon!')),
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const MyProfileScreen(),
+                  ),
                 );
               },
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildAppointmentStatCard() {
+    final currentUser = _authService.currentUser;
+    if (currentUser == null) {
+      return _buildStatCard(
+        icon: Icons.calendar_today,
+        title: 'Appointments',
+        value: '0',
+        color: Colors.blue,
+      );
+    }
+
+    return StreamBuilder(
+      stream: _appointmentService.getAppointmentsByPatient(currentUser.uid),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildStatCard(
+            icon: Icons.calendar_today,
+            title: 'Appointments',
+            value: '...',
+            color: Colors.blue,
+          );
+        }
+
+        if (snapshot.hasError) {
+          return _buildStatCard(
+            icon: Icons.calendar_today,
+            title: 'Appointments',
+            value: '0',
+            color: Colors.blue,
+          );
+        }
+
+        final appointments = snapshot.data ?? [];
+        return _buildStatCard(
+          icon: Icons.calendar_today,
+          title: 'Appointments',
+          value: appointments.length.toString(),
+          color: Colors.blue,
+        );
+      },
+    );
+  }
+
+  Widget _buildReportsStatCard() {
+    final currentUser = _authService.currentUser;
+    if (currentUser == null) {
+      return _buildStatCard(
+        icon: Icons.description,
+        title: 'Reports',
+        value: '0',
+        color: Colors.green,
+      );
+    }
+
+    return StreamBuilder(
+      stream: _medicalNoteService.getMedicalNotesByPatient(currentUser.uid),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildStatCard(
+            icon: Icons.description,
+            title: 'Reports',
+            value: '...',
+            color: Colors.green,
+          );
+        }
+
+        if (snapshot.hasError) {
+          return _buildStatCard(
+            icon: Icons.description,
+            title: 'Reports',
+            value: '0',
+            color: Colors.green,
+          );
+        }
+
+        final reports = snapshot.data ?? [];
+        return _buildStatCard(
+          icon: Icons.description,
+          title: 'Reports',
+          value: reports.length.toString(),
+          color: Colors.green,
+        );
+      },
     );
   }
 
