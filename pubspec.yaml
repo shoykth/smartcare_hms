@@ -51,6 +51,10 @@ dependencies:
   intl: ^0.20.2
   url_launcher: ^6.3.1
   
+  # File and Image Pickers
+  image_picker: ^1.0.7
+  file_picker: ^8.0.0+1
+  
   # Navigation
   go_router: ^16.2.5
 

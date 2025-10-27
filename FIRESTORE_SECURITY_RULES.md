@@ -75,6 +75,10 @@ service cloud.firestore {
       // Note: This requires patientId to match userId
       allow read: if request.auth != null && 
         request.auth.uid == patientId;
+      
+      // Allow patients to query their own profile by email
+      allow read: if request.auth != null && 
+        request.auth.token.email == resource.data.email;
     }
     
     // ========================================
@@ -154,10 +158,10 @@ service cloud.firestore {
     // MEDICAL NOTES COLLECTION (Phase 3)
     // ========================================
     match /medical_notes/{noteId} {
-      // Can read if you're the patient, doctor who created it, or admin
+      // Can read if you're the patient, any doctor, or admin
       allow read: if request.auth != null && 
         (resource.data.patientId == request.auth.uid || 
-         resource.data.doctorId == request.auth.uid ||
+         isDoctor() ||
          isAdmin());
       
       // Only doctors can create medical notes
@@ -212,16 +216,54 @@ service cloud.firestore {
     }
     
     // ========================================
-    // MESSAGES COLLECTION (Future)
+    // CHAT CONVERSATIONS COLLECTION
     // ========================================
-    match /messages/{conversationId} {
-      allow read, write: if request.auth != null && 
-        request.auth.uid in resource.data.participants;
+    match /chat_conversations/{conversationId} {
+      // Can read if you're the patient or doctor in the conversation
+      allow read: if request.auth != null && 
+        (request.auth.uid == resource.data.patientId || 
+         request.auth.uid == resource.data.doctorId);
       
-      match /chat/{messageId} {
-        allow read, write: if request.auth != null && 
-          request.auth.uid in get(/databases/$(database)/documents/messages/$(conversationId)).data.participants;
-      }
+      // Can create if you're one of the participants (patient or doctor)
+      allow create: if request.auth != null && 
+        (request.auth.uid == request.resource.data.patientId || 
+         request.auth.uid == request.resource.data.doctorId);
+      
+      // Can update if you're a participant (for last message, unread count)
+      allow update: if request.auth != null && 
+        (request.auth.uid == resource.data.patientId || 
+         request.auth.uid == resource.data.doctorId);
+      
+      // Only admins can delete conversations
+      allow delete: if request.auth != null && isAdmin();
+    }
+    
+    // ========================================
+    // CHAT MESSAGES COLLECTION
+    // ========================================
+    match /chat_messages/{messageId} {
+      // Can read if you're involved in the conversation (check via chatId)
+      allow read: if request.auth != null && 
+        (request.auth.uid == resource.data.senderId ||
+         exists(/databases/$(database)/documents/chat_conversations/$(resource.data.chatId)) &&
+         (request.auth.uid == get(/databases/$(database)/documents/chat_conversations/$(resource.data.chatId)).data.patientId ||
+          request.auth.uid == get(/databases/$(database)/documents/chat_conversations/$(resource.data.chatId)).data.doctorId));
+      
+      // Can create if you're the sender and part of the conversation
+      allow create: if request.auth != null && 
+        request.auth.uid == request.resource.data.senderId &&
+        exists(/databases/$(database)/documents/chat_conversations/$(request.resource.data.chatId)) &&
+        (request.auth.uid == get(/databases/$(database)/documents/chat_conversations/$(request.resource.data.chatId)).data.patientId ||
+         request.auth.uid == get(/databases/$(database)/documents/chat_conversations/$(request.resource.data.chatId)).data.doctorId);
+      
+      // Can update if you're part of the conversation (for read status)
+      allow update: if request.auth != null && 
+        exists(/databases/$(database)/documents/chat_conversations/$(resource.data.chatId)) &&
+        (request.auth.uid == get(/databases/$(database)/documents/chat_conversations/$(resource.data.chatId)).data.patientId ||
+         request.auth.uid == get(/databases/$(database)/documents/chat_conversations/$(resource.data.chatId)).data.doctorId);
+      
+      // Only admins can delete messages
+      allow delete: if request.auth != null && isAdmin();
     }
     
     // ========================================
@@ -232,6 +274,43 @@ service cloud.firestore {
       allow write: if request.auth != null && isAdmin();
     }
     
+    // ========================================
+    // BILLS COLLECTION
+    // ========================================
+    match /bills/{billId} {
+      // Patients can read their own bills, doctors and admins can read all
+      allow read: if request.auth != null && 
+        (resource.data.patientId == request.auth.uid || isDoctor() || isAdmin());
+      
+      // Only doctors and admins can create bills
+      allow create: if request.auth != null && (isDoctor() || isAdmin());
+      
+      // Only admins can update bills (for corrections)
+      allow update: if request.auth != null && isAdmin();
+      
+      // Only admins can delete bills
+      allow delete: if request.auth != null && isAdmin();
+    }
+    
+    // ========================================
+    // PAYMENTS COLLECTION
+    // ========================================
+    match /payments/{paymentId} {
+      // Patients can read their own payments, doctors and admins can read all
+      allow read: if request.auth != null && 
+        (resource.data.patientId == request.auth.uid || isDoctor() || isAdmin());
+      
+      // Patients can create payments for their bills, doctors and admins can create any
+      allow create: if request.auth != null && 
+        (resource.data.patientId == request.auth.uid || isDoctor() || isAdmin());
+      
+      // Only admins can update payments (for status corrections)
+      allow update: if request.auth != null && isAdmin();
+      
+      // Only admins can delete payments
+      allow delete: if request.auth != null && isAdmin();
+    }
+
     // ========================================
     // ACTIVITY LOGS COLLECTION
     // ========================================
@@ -279,14 +358,44 @@ service cloud.firestore {
 - ✅ Read: Patient, Doctor, or Admin
 - ✅ Write: Doctors & Admins only
 
+### Medical Notes (FIXED - Phase 3)
+- ✅ Read: Patient (own), All Doctors, or Admin
+- ✅ Create: Doctors only
+- ✅ Update: Doctor who created or Admin
+- ✅ Delete: Admins only
+
 ### Billing
 - ✅ Read: Patient (own) or Admin
 - ✅ Write: Admins only
+
+### Bills (NEW - Payment System)
+- ✅ Read: Patient (own), Doctors & Admins (all)
+- ✅ Create: Doctors & Admins only
+- ✅ Update: Admins only
+- ✅ Delete: Admins only
+
+### Payments (NEW - Payment System)
+- ✅ Read: Patient (own), Doctors & Admins (all)
+- ✅ Create: Patient (own bills), Doctors & Admins (any)
+- ✅ Update: Admins only
+- ✅ Delete: Admins only
 
 ### Notifications
 - ✅ Read: Own notifications
 - ✅ Create: All authenticated
 - ✅ Update: Own notifications
+- ✅ Delete: Admins only
+
+### Chat Conversations (NEW - Chat System)
+- ✅ Read: Patient or Doctor in conversation only
+- ✅ Create: Patient or Doctor in conversation only
+- ✅ Update: Patient or Doctor in conversation only (last message, unread count)
+- ✅ Delete: Admins only
+
+### Chat Messages (NEW - Chat System)
+- ✅ Read: Sender or conversation participants (patient/doctor) only
+- ✅ Create: Sender (must be conversation participant)
+- ✅ Update: Conversation participants only (read status)
 - ✅ Delete: Admins only
 
 ### Admin Settings

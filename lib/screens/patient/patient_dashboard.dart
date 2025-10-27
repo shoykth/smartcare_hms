@@ -9,6 +9,8 @@ import '../appointments/book_appointment_screen.dart';
 import 'prescriptions_screen.dart';
 import 'medical_records_screen.dart';
 import 'my_profile_screen.dart';
+import 'billing_screen.dart';
+import '../chat/chat_list_screen.dart';
 
 class PatientDashboard extends ConsumerStatefulWidget {
   final String userName;
@@ -187,12 +189,28 @@ class _PatientDashboardState extends ConsumerState<PatientDashboard> {
             const SizedBox(height: 12),
             _buildMenuCard(
               context: context,
+              icon: Icons.chat_bubble_outline,
+              title: 'Chat with Doctors',
+              subtitle: 'Send messages and files to your doctors',
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const ChatListScreen(),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            _buildMenuCard(
+              context: context,
               icon: Icons.payment,
               title: 'Billing & Payments',
               subtitle: 'View bills and payment history',
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Feature coming soon!')),
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const BillingScreen(),
+                  ),
                 );
               },
             ),

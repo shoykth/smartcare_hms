@@ -8,6 +8,7 @@ import 'doctor_appointments_screen.dart';
 import 'doctor_profile_screen.dart';
 import 'medical_notes_screen.dart';
 import 'doctor_availability_screen.dart';
+import '../chat/chat_list_screen.dart';
 
 class DoctorDashboardEnhanced extends StatefulWidget {
   final String userName;
@@ -220,6 +221,22 @@ class _DoctorDashboardEnhancedState extends State<DoctorDashboardEnhanced> {
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) => const MedicalNotesScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
+
+                    _buildMenuCard(
+                      context: context,
+                      icon: Icons.chat_bubble_outline,
+                      title: 'Patient Messages',
+                      subtitle: 'Chat with patients and share files',
+                      color: Colors.blue,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const ChatListScreen(),
                           ),
                         );
                       },

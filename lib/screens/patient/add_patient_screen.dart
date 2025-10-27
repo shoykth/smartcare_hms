@@ -403,7 +403,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     String validValue = items.contains(value) ? value : items.first;
     
     return DropdownButtonFormField<String>(
-      value: validValue,
+      initialValue: validValue,
       decoration: InputDecoration(
         labelText: label,
         filled: true,

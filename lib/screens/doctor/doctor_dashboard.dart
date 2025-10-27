@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/auth_service.dart';
 import '../../utils/constants.dart';
 import '../patient/patient_list_screen.dart';
+import '../chat/chat_list_screen.dart';
 
 class DoctorDashboard extends ConsumerWidget {
   final String userName;
@@ -144,6 +145,20 @@ class DoctorDashboard extends ConsumerWidget {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => const PatientListScreen(),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            _buildMenuCard(
+              context: context,
+              icon: Icons.chat_bubble_outline,
+              title: 'Patient Messages',
+              subtitle: 'Chat with patients and share files',
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const ChatListScreen(),
                   ),
                 );
               },
