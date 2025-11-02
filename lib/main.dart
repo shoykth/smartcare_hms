@@ -6,6 +6,7 @@ import 'firebase_options.dart';
 import 'utils/theme.dart';
 import 'services/auth_service.dart';
 import 'models/user_model.dart';
+import 'screens/splash_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/email_verification_screen.dart';
 import 'screens/admin/admin_dashboard.dart';
@@ -33,24 +34,13 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'SmartCare HMS',
-      debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const AuthWrapper(),
-      // Add route generator to handle named routes
-      onGenerateRoute: (settings) {
-        // Handle all routes by returning the AuthWrapper
-        // This ensures auth state is always checked
-        return MaterialPageRoute(
-          builder: (context) => const AuthWrapper(),
-          settings: settings,
-        );
+      home: const SplashScreen(),
+      routes: {
+        '/auth': (context) => const AuthWrapper(),
+        '/login': (context) => const LoginScreen(),
       },
-      // Fallback for unknown routes
-      onUnknownRoute: (settings) {
-        return MaterialPageRoute(
-          builder: (context) => const AuthWrapper(),
-        );
-      },
+      debugShowCheckedModeBanner: false,
     );
   }
 }
